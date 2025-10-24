@@ -1,0 +1,4 @@
+Table to provide information user id and mailbox    
+Userid,user,receiver ID,mailbox
+Buy023,Michael,RCV023,mailbox023
+Buy033,scottie,RCV033,mailbox033

@@ -1,0 +1,160 @@
+E-commerce Shopping Rules Documentation Policy
+
+This document provides a detailed explanation of the logic and purpose behind each shopping rule. Each rule's enforcement directly impacts transaction processing, ensuring data integrity, compliance, and proper system flow.
+
+---
+All date format should be : yyyy-mm-dd if not Reject with WRONG DATE FORMAT
+
+I. Location, User, and Core Data Validation
+
+Trace Log: Check VALID Place
+Condition: Place is one of {"A", "B", "C"} AND Address is not filled.
+Outcome: REJECT: Place Missing
+Detailed Explanation: Critical validation: For specific, restricted Places (A, B, C), the physical Address is a mandatory piece of information. Failure to provide the address when transacting in these locations prevents shipping, invoicing, or compliance checks, hence the transaction is rejected.
+
+Trace Log: Check User Id
+Condition: User ID must not be filled.
+Outcome: REJECT: NO USER ID
+Detailed Explanation: This rule enforces the mandatory presence of a User ID for any transaction. An unfurnished or empty User ID indicates an unauthenticated or invalid session, preventing accountability and record-keeping.
+
+Trace Log: Check have Type
+Condition: Type must not be filled.
+Outcome: REJECT: No Type
+Detailed Explanation: The Type (e.g., PURCHASE, RETURN) defines the fundamental nature of the transaction. If this field is empty, the system cannot determine the correct processing logic, requiring rejection.
+
+Trace Log: Check have Type
+Condition: Type must be filled.
+Outcome: ALLOW: proceed to next rule
+Detailed Explanation: If the transaction Type is correctly identified, it meets the minimum data requirement to proceed with specific type-dependent checks (e.g., Purchase or Refund rules).
+
+Trace Log: Check Valid User Id
+Condition: User ID is filled AND User ID is NOT registered in the [User Id Mailbox Table].
+Outcome: REJECT: Invalid user ID Mailbox
+Detailed Explanation: If a User ID is provided, this rule validates its authenticity by cross-referencing its associated Mailbox against the central User Id Mailbox Table. An unverified mailbox suggests a fraudulent or misconfigured user account, halting the process.
+
+Trace Log: Check Valid User Id
+Condition: User ID is not filled OR (User ID is filled AND Mailbox Of the User ID is registered...).
+Outcome: ALLOW: proceed to next rule
+Detailed Explanation: The rule is satisfied if the User ID is optionally empty (if allowed by other rules) or if the provided ID and its mailbox are properly authenticated and registered.
+
+---
+
+II. Sequencing, Quantity, and Reference Checks
+
+Trace Log: Check Valid Change Indicator
+Condition: Change Indicator is not filled OR is not one of {"REFUND", "CHG"} AND Item Serial Number should not be in sequence.
+Outcome: REJECT: Serial Number Not in Order
+Detailed Explanation: This check enforces the sequential integrity of Item Serial Numbers when the change indicator is invalid. If the change type is properly identified (REFUND or CHG), the item sequencing check is bypassed (implied by the original logic structure). If the indicator is invalid, the sequence must be perfect to proceed, failing otherwise.
+
+Trace Log: valid methodology code check
+Condition: At least one methodology code exists AND is not validated against the [methodology Code Table].
+Outcome: REJECT: Invalid methodology code
+Detailed Explanation: All codes used to categorize or process the item must be verifiable against a master reference table. An unvalidated code implies a violation of internal standards or external regulations, requiring rejection.
+
+Trace Log: Total Item Check
+Condition: Total Number Of Items is filled AND NOT 'is_return_application' AND number of items is NOT Total Number Of Items.
+Outcome: REJECT: Total Count Of Items is wrong in purchase
+Detailed Explanation: For standard Purchase transactions, the explicitly stated Total Number Of Items must precisely match the count of items in the item list, ensuring manifest accuracy.
+
+Trace Log: Total Item Check
+Condition: Total Number Of Items is filled AND 'is_return_application' AND number of refund items is NOT Total Number Of Items.
+Outcome: REJECT: Refund Total Count Of Items is wrong in purchase
+Detailed Explanation: For Return/Refund applications, the expected count must match the total number of items specified for the refund. This prevents partial or incorrect return processing.
+
+Trace Log: Check for duplicate invoice number
+Condition: Number of elements in 'List of Invoices' is > 0 AND stored values in "invoice numbers" have duplicated entries.
+Outcome: REJECT: Duplicate Invoice Number
+Detailed Explanation: Invoice numbers must be globally unique to prevent accounting errors, double-processing, and ensure proper record linkage. If duplicates are found within the list, the process is stopped.
+
+Trace Log: Check for duplicate invoice number
+Condition: Number of elements in 'List of Invoices' is 0 OR (Number of elements in 'List of Invoices' is > 0 AND no duplicated entries...).
+Outcome: ALLOW: proceed to next rule
+Detailed Explanation: If there are no invoices to check, or if the provided invoices are unique, the rule is satisfied.
+
+Trace Log: Duplicate License
+Condition: Licence Numbers have duplicated entries.
+Outcome: REJECT: Duplicate Entries on Licence Number
+Detailed Explanation: Similar to invoice numbers, license numbers must be unique to correctly track compliance, export/import permissions, or restricted goods, preventing policy violation.
+
+---
+
+III. Package, Weight, and Transport Logistics
+
+Trace Log: Outer Package check
+Condition: Total Outer Package is NOT filled OR Total Outer Package is <= 0.
+Outcome: REJECT: Total Outer Package must be greater than 0
+Detailed Explanation: The overall package count is a mandatory logistical data point. A non-positive count is illogical for any shipment, ensuring minimum shipping data quality.
+
+Trace Log: Outer Package check
+Condition: Total Outer Package is filled AND Total Outer Package is > 0.
+Outcome: ALLOW: proceed to next rule
+Detailed Explanation: The total number of packages is provided and is a valid positive number.
+
+Trace Log: Outer package Quantity Check
+Condition: Current item Outer Package Quantity is filled AND equals 0.
+Outcome: REJECT: Outer Pack Quantity must be bigger than 0
+Detailed Explanation: If an item specifies a quantity of outer packages, that quantity must be a positive integer. A zero count is a data error if the field is filled.
+
+Trace Log: Inner package Quantity Check
+Condition: Current item Inner Package Quantity is filled AND equals 0.
+Outcome: REJECT: Inner package Quantity cannot be zero
+Detailed Explanation: If an item specifies a quantity of inner packages, that quantity must be positive. A zero value is logically impossible if the quantity is being tracked.
+
+Trace Log: Purchase weight check
+Condition: Type is "PURCHASE" AND Total Gross Weight Unit is NOT filled OR (Type is "PURCHASE" AND complex UOM check failure).
+Outcome: REJECT: Gross Weight Unit Error
+Detailed Explanation: This ensures that for PURCHASE transactions, a weight unit is provided and is logically consistent with the specified Mode and Inward Mode Of Transport (e.g., 'A' and 'D' modes have specific UOM requirements, as do A and B inward modes).
+
+Trace Log: Sell Mode Weight Check
+Condition: NONE of the conditions for allowed UOM/Mode combinations is true.
+Outcome: REJECT: Total Gross Weight Unit NOT TON
+Detailed Explanation: This rule enforces mandatory and appropriate Unit of Measure (UOM) rules based on the Outward Mode Of Transport. For instance, 'SEA' often mandates TON, and 'AIR' often mandates KG for logistics systems. Failure to match a required combination results in rejection.
+
+---
+
+IV. Time and Batch Integrity
+
+Trace Log: Valid Current Batch Number Check
+Condition: Current item Current Batch Number is filled AND starts or ends with space/tab (" " or "\t").
+Outcome: REJECT: Invalid Batch Lot Number
+Detailed Explanation: This rule prevents leading or trailing whitespace in the Batch Number to maintain data cleanliness and consistency, avoiding lookup errors in inventory systems.
+
+Trace Log: Check Valid Date of purchase
+Condition: Date Of purchase In Purchase Records is after the Date Of Posting.
+Outcome: REJECT: Invalid Date of Purchase
+Detailed Explanation: A purchase event must logically occur on or before the system's posting date. An event dated in the future or after it was recorded is an impossible sequence, suggesting a data entry error.
+
+---
+
+V. Recipient, Cart, and Supplier Source Checks
+
+Trace Log: Have Receiver ID
+Condition: At least one string in Receiver IDs AND the Receiver Mailbox is NOT registered in the [User Profile Table's Mailbox].
+Outcome: REJECT: Invalid Receiver IDs
+Detailed Explanation: Similar to the sender validation, all provided Receiver IDs must be authenticated against the [User Profile Table]. Unregistered IDs risk sending goods to unverified or non-existent recipients.
+
+Trace Log: check carts has cart number information and sequence number
+Condition: At least one cart with cart number information AND its cart Sequence Number is NOT filled OR is <= 0.
+Outcome: REJECT: Invalid Cart Sequence Number
+Detailed Explanation: When a transaction involves multiple carts, each cart must have a positive, non-zero sequence number to ensure the correct ordering and processing of the shopping carts.
+
+Trace Log: check supplier source sequence number
+Condition: Supplier source details is NOT empty AND number of elements in 'supplier source sequence number > 0' is NOT equivalent to number of elements in supplier source details.
+Outcome: REJECT: Error with supplier source Detail Sequence Number
+Detailed Explanation: This enforces that every source detail must be assigned a positive sequence number. A mismatch means some details are missing required sequencing data, which is essential for audit trails.
+
+---
+
+VI. Discount and Purchase Record Logic
+
+Trace Log: Check for special discount rate
+Condition: Specific conditions for beef/special discount are met AND Coupon Discount is NOT filled OR is <= 0 OR is > 100.
+Outcome: REJECT: Coupon Discount is wrong
+Detailed Explanation: For highly specific promotional items (e.g., special discount beef with a COUPON UOM), the Coupon Discount must be filled, be a positive value, and logically remain under 100% (a value greater than 100 is financially nonsensical).
+
+Trace Log: Check Purchase Record
+Condition: CHANGE Indicator = "RETURN" AND Latest Purchases record exists AND Message Type is NOT the Latest Purchase Type.
+Outcome: REJECT: Purchase Reference (Purchase Record ID)
+Detailed Explanation: When initiating a RETURN, the system verifies that the type of the current message aligns with the Type of the latest referenced purchase record. A mismatch (e.g., trying to return a Service when the purchase was for a Product) indicates a mismatch in the reference ID, halting the return.
+
+if there are no rejection encounter, return to Good to Buy

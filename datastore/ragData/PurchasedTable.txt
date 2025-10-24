@@ -1,0 +1,3 @@
+PurchaseID,Type,totalValue
+001,NEWPURCHASE,230
+002,RETUR,110

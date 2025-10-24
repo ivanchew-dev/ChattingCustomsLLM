@@ -1,0 +1,271 @@
+The below rules check are for a shopping rules in our ecommerce platform.
+When a query is ask, the question will be check if the rules are being fulfiled.
+Return all the outcome that each rule say.
+Each rule will advice on the outcome either allow or reject.
+set 'this' to “Check VALID Place” in the outcome_trace_log ; 
+if
+    the Place is one of { “A” , “B” , “C” }
+    and the Address is not filled
+then
+    
+    reject with Place Missing ;
+
+set 'this' to “Check Valid Change Indicator”in the outcome_trace_log ; 
+if 
+    the Change Indicator is not filled
+    or the Change Indicator is not one of { “REFUND”, “CHG”}
+then
+	Item Serial Number should be in sequence
+	else
+	reject with Serial Number Not in Order;
+
+set 'this' to “Check User Id”in the outcome_trace_log ; 
+if
+    the User ID must not be filled  
+then
+    
+     reject with NO USER ID  ;
+
+
+set 'this' to “Check have Type”in the outcome_trace_log ; 
+if
+    the Type must be filled 
+then
+    proceed to next rule as conditions are met ;
+else
+	
+   reject with No Type ;
+
+
+set 'this' to “Check Valid User Id”in the outcome_trace_log ; 
+if
+    ( the User ID is not filled
+    or ( the User ID is filled
+    and the Mailbox Of the User ID is registered in the [User Id Mailbox Table] ) )
+then
+    proceed to next rule as conditions are met ;
+else
+	
+   reject with Invalid user ID Mailbox ;
+
+
+  set 'this' to “valid methodology code check” in the outcome trace log ; 
+if
+    there is at least one methodology code in the methodology codes 
+then
+    
+     for each methodology code in the methodology codes :
+        - check that this methodology code is validated against the [methodology Code Table] ,
+        else
+           reject with Invalid methodology code;
+
+    set 'this' to “refund and type check” in the outcome trace log ;
+    set 'is_return_application' to all of the following conditions are true :
+            - the Type = RETURN
+            - the Indicator is one of { “RETURN”} ;
+
+ set 'this' to “Total Item Check in the outcome trace log ;
+   if
+    the Total Number Of Items is filled
+then
+    check if it is not true that 'is_return_application'
+    and the number of elements in the items is not the Total Number Of Items ,
+    then
+        reject with Total Count Of Items is wrong in purchase;
+    check if 'is_return_application'
+    and the number of elements in the refund items is not the same Total Number Of Items ,
+    then
+        reject with Refund Total Count Of Items is wrong in purchase;;
+
+
+definitions 
+    set 'this' to “Outer Package check” in the outcome trace log ; 
+if
+    the Total Outer Package is filled
+    and the Total Outer Package is more than 0
+then
+    proceed to next rule as conditions are met ;
+else
+	
+   reject with Total Outer Package must be greater than 0 ;
+
+definitions
+    set 'this' to “Purchase weight check” in the outcome trace log ;
+if
+    the Type is one of { “PURCHASE”  }
+    and the Total Gross Weight Unit must be filled
+    and ( the Total Gross Weight Unit is not one of { "KG" }
+    or ( the Mode is “A”
+    and the Total Gross Weight Unit is not "TON” )
+    or ( the Mode  is “D”
+    and the Total Gross Weight Unit is not "KG" )
+    or ( the Inward Mode Of Transport is one of { “A” , “B” }
+    and the Total Gross Weight Unit is not one of { "TON” , "KG” } ) )
+then
+    reject with Gross Weight Unit Error;
+else
+	proceed to next rule as conditions are met ;
+
+    set 'this' to “Sell Mode Weight Check in the outcome trace log ;
+    set 'total gross uom is TON_KG' to all of the following conditions are true :
+            - the Total Gross Weight Unit is filled
+            - the Total Gross Weight Unit is one of { "TON” , "KG" } ;
+    set 'out transport by SEA' to all of the following conditions are true :
+            - the Mode is filled
+            - the Mode  is “SEA” ;
+    set 'out transport by AIR' to all of the following conditions are true :
+            - the Mode is filled
+            - the Mode is “AIR” ;
+    set 'out transport OTH' to all of the following conditions are true :
+            - the Mode is filled
+            - the Mode is not one of { “SEA” , “AIR” } ;
+if
+    any of the following conditions is true :
+            - ( the Outward Mode Of Transport is not filled
+            and 'total gross uom is TON_KG' )
+            - ( 'out transport by SEA'
+            and the Total Gross Weight Unit is "TON” )
+            - ( 'out transport by AIR'
+            and the Total Gross Weight Unit is "KG" )
+            - ( 'out transport OTH'
+            and 'total gross uom is TON_KG' )
+then
+    proceed to next rule as conditions are met ;
+else
+    reject with Total Gross Weight Unit NOT TON;
+
+definitions 
+    set 'this' to “Outer package Quantity Check in the outcome trace log ; 
+if
+    current item Outer Package Quantity is filled
+    and current item Outer Package Quantity equals 0 
+then
+    
+     reject with Outer Pack Quantity must be bigger than 0;
+else
+   proceed to next rule as conditions are met ;
+
+    set 'this' to “Valid “Current Batch Number Check in the outcome trace log ;
+if
+    ( current item Current Batch Number is filled
+    and ( current item Current Batch Number starts with one of { " " , "\t" }
+    or current item Current Batch Number ends with one of { " " , "\t" } ) )
+then
+    reject with Invalid Batch Lot Number ;
+else
+    proceed to next rule as conditions are met ;
+
+
+definitions
+    set 'this' to “Duplicate License” in the outcome trace log ;
+if
+    the Licence Numbers have duplicated entries
+then
+    reject with Duplicate Entries on Licence Number ;
+
+definitions
+    set 'this' to “Check for duplicate invoice number” in the outcome trace log ;
+   
+    if
+    the number of elements in 'List of Invoices' is more than 0
+then
+   
+    check that the stored values in the "invoice numbers" do not have duplicated entries ,
+    else
+        reject with Duplicate Invoice Number ;
+else
+    proceed to next rule as conditions are met ;
+
+    set 'this' to “Have Receiver ID” in the outcome trace log ;
+if
+    there is at least one string in the Receiver IDs
+
+then
+    for each string in the Receiver IDs :
+        - check that the Receiver Mailbox is registered in the [User Profile Table's Mailbox] ,
+        else
+            reject with Invalid Receiver IDs ;
+
+else
+    proceed to next rule as conditions are met ;
+
+
+    set 'this' to “Inner package Quantity Check in the outcome trace log ;
+if
+    current item Inner Package Quantity is filled
+then
+    check that current item Inner Package Quantity does not equal 0 ,
+    else
+        reject with Inner package Quantity cannot be zero ;
+
+definitions 
+    set 'this' to “Check “Valid Date of purchase” in the outcome trace log ; 
+if
+    the Date Of purchase In Purchase Records is after the Date Of Posting 
+then
+    
+     reject with Invalid Date of Purchase ;
+
+
+
+definitions 
+    set 'this' to “check carts has cart number information and sequence number” in the outcome trace log ; 
+
+
+if
+    there is at least one cart in carts ‘with cart number information’ 
+then
+    
+     for each cart in 'with cart number information’ :
+        - check that this cart information contain cart Sequence Number is filled and this cart sequence Number is more than 0 ,
+        else
+           reject with Invalid Cart Sequence Number ;
+
+
+
+definitions
+    set 'this' to “check supplier source sequence number’ in the outcome trace log ;
+if
+    the supplier source  details is not empty
+    and the number of elements in the supplier source  details is more than 0
+then
+    check that the number of elements in 'supplier source sequence number > 0' is equivalent quantity to the number of elements in the supplier source  details ,
+    else
+        reject Error with supplier source Detail Sequence Number  ;
+else
+    proceed to next rule as conditions are met ;
+
+
+definitions 
+    set 'this' to “Check for special discount rate’ in the outcome trace log ; 
+if
+    all of the following conditions are true :
+            - current item is special discount
+            and current item is beef
+            - ( any of the following conditions is true :
+                    - ( current item Discount table has special discount  Specific Rate UOM is filled
+                    and current item Discount table has special discount UOM is “COUPON” )
+then
+	
+    check that current item Coupon Discount is filled
+    and current item Coupon Discountl is more than 0 and at most 100,
+    else
+        reject with Coupon Discount is wrong;
+else
+    proceed to next rule as conditions are met ;
+
+definitions
+    set 'this' to “Check Purchase Record" in the outcome trace log ;
+
+    if
+    all of the following conditions are true :
+            - the CHANGE Indicator = one of { “RETURN” }
+            - the Latest Purchases record exists in Purchased Table
+            - the Message Type is not the Latest Purchase Type ,
+then
+    reject with Purchase Reference ( Purchase Record ID ) ;
+else
+    proceed to next rule as conditions are met ;
+
+
+

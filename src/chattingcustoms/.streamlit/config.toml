@@ -1,0 +1,6 @@
+[theme]
+primaryColor="#007bff"  # A nice blue for the primary color
+backgroundColor="#001f3f"  # A deep navy blue for the background
+secondaryBackgroundColor="#003366"  # A lighter navy for secondary backgrounds
+textColor="#fff"  # White text for contrast
+font="sans serif"
