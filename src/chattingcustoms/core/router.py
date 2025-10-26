@@ -64,14 +64,16 @@ def route_to_chatbot(user_query:str):
         st.write("Logging Threatening Query...")
         
         ip_address = network_util.get_public_ip()
-        
-        st.write(ip_address)
+        st.write("IP Address: ", ip_address)
+        st.stop()
         lat_log = geo_location_util.get_location_from_ip_local(ip_address)
         latitude = lat_log[0]
         longitude = lat_log[1]
-        
+        st.write("Latitude: ", latitude)
+        st.write("Longitude: ", longitude)
         # Get username safely
         username = st.session_state.get("username", "anonymous")
+        st.write("Username: ", username)
         st.stop()
         data_row = [
             user_query, ip_address, latitude, longitude,
