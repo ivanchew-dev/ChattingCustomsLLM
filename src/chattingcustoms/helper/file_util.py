@@ -52,7 +52,7 @@ def append_to_csv(file_name: str, new_row: List[Any]) -> bool:
         app_parent_directory_path= find_file_in_parent_directories(".env",script_directory)[:-4]
         
         print(app_parent_directory_path)
-        datastore_path = app_parent_directory_path + "datastore/appData/"
+        datastore_path = os.path.join(app_parent_directory_path, "datastore", "appData", "")
         with open(datastore_path + file_name, 'a', newline='', encoding='utf-8') as file:
 
             # Create a csv.writer object

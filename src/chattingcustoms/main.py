@@ -82,6 +82,7 @@ def handle_login(username, password):
 
 def handle_chat_input(prompt):
     """Handles the user's chat input."""
+    st.write("Handle chat input called")
     if prompt:
         st.session_state.messages.append({"role": "user", "content": prompt})
         with st.spinner("AI is thinking..."):
@@ -97,7 +98,8 @@ def Load_Rag():
     """Load RAG data function."""
     try:
         # Add your RAG loading logic here
-        rag_util.load_rag('datastore/ragData', '*.txt')
+        rag_data_path = os.path.join(os.path.dirname(__file__), "..", "..", "datastore", "ragData")
+        rag_util.load_rag(rag_data_path, '*.txt')
         st.success("RAG data loaded successfully!")
         # You can add actual RAG loading implementation here
         # For example: load documents, create embeddings, etc.
