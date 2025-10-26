@@ -82,7 +82,7 @@ def handle_login(username, password):
 
 def handle_chat_input(prompt):
     """Handles the user's chat input."""
-    st.write("Handle chat input called")
+
     if prompt:
         st.session_state.messages.append({"role": "user", "content": prompt})
         with st.spinner("AI is thinking..."):
