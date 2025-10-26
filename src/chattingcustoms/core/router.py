@@ -56,8 +56,10 @@ def route_to_chatbot(user_query:str):
             return 'We are unable to answer your query as it is not related to import and export'
     else:
         # Handle threat detected - log the incident
+        st.write("Logging Threatening Query...")
         ip_address = network_util.get_public_ip()
-        print(ip_address)
+        
+        st.write(ip_address)
         lat_log = geo_location_util.get_location_from_ip_local(ip_address)
         latitude = lat_log[0]
         longitude = lat_log[1]
