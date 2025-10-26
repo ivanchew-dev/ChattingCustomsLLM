@@ -48,7 +48,8 @@ def route_to_chatbot(user_query:str):
         trader_category = "customs_officer"
         st.write(trader_category)
     st.write("After threat assessment")
-    st.stop()
+    st.write("Trader Category : ", trader_category)
+    
     if (threat_assessment['chattingcustoms']['threat_category'].lower() == "none"):
         if trader_category.casefold() == 'expert trader':
             return expert_trader_chatbot.chatting_with_expert_trader(user_query)
@@ -61,6 +62,7 @@ def route_to_chatbot(user_query:str):
     else:
         # Handle threat detected - log the incident
         st.write("Logging Threatening Query...")
+        st.stop()
         ip_address = network_util.get_public_ip()
         
         st.write(ip_address)
