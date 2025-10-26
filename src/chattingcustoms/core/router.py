@@ -35,12 +35,13 @@ Format answer in plain text
 
 def route_to_chatbot(user_query:str):
     trader_category = trader_categorizer(user_query)
+    st.write("Before threat assessment")
     threat_assessment = json.loads(threat_assessment_chatbot.check_for_potential_threat(user_query))
-    print (threat_assessment)
-    print (type(threat_assessment))
-    print(threat_assessment.keys())
-    print (threat_assessment['chattingcustoms']['threat_category'])
-    print(trader_category)
+    st.write (threat_assessment)
+    st.write(type(threat_assessment))
+    st.write(threat_assessment.keys())
+    st.write(threat_assessment['chattingcustoms']['threat_category'])
+    st.write(trader_category)
     # Check if user is logged in (customs officer)
     if st.session_state.get("password_correct", False):
         trader_category = "customs_officer"
