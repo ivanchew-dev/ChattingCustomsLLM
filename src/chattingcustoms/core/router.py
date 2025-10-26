@@ -7,6 +7,7 @@ from core import expert_trader_chatbot
 from core import self_service_trader_chatbot
 from core import threat_assessment_chatbot
 from core import tno_chatbot
+
 import json
 import datetime
 
@@ -41,7 +42,7 @@ def route_to_chatbot(user_query:str):
     st.write(threat_assessment.keys())
     st.write(threat_assessment['chattingcustoms']['threat_category'])
     st.write("Trader Category : ", trader_category)
-
+    st.stop()
     # Check if user is logged in (customs officer)
     if st.session_state.get("password_correct", False):
         trader_category = "customs_officer"
@@ -58,7 +59,6 @@ def route_to_chatbot(user_query:str):
     else:
         # Handle threat detected - log the incident
         st.write("Logging Threatening Query...")
-        st.stop
         ip_address = network_util.get_public_ip()
         
         st.write(ip_address)
