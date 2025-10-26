@@ -14,9 +14,11 @@ def get_location_from_ip_local(ip_address):
         tuple: (latitude, longitude) or None if location is not found.
     """
     try:
-        
-        app_parent_directory_path= file_util.find_file_in_parent_directories(".env")[:-4]
-        db_path = os.path.join(app_parent_directory_path, "datastore", "ragData", "GeoLite2-City.mmdb")
+        # Get the root directory path relative to this script location
+        # This script is in src/chattingcustoms/helper/, so go up 3 levels to reach project root
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        root_dir = os.path.join(script_dir, "..", "..", "..")
+        db_path = os.path.join(root_dir, "datastore", "ragData", "GeoLite2-City.mmdb")
         # Create a reader object, specifying the path to your downloaded .mmdb file
         with geoip2.database.Reader(db_path) as reader:
             response = reader.city(ip_address)
