@@ -41,12 +41,12 @@ def route_to_chatbot(user_query:str):
     st.write(type(threat_assessment))
     st.write(threat_assessment.keys())
     st.write(threat_assessment['chattingcustoms']['threat_category'])
-    st.write(trader_category)
-    st.stop()
+    st.write("Trader Category : ", trader_category)
+
     # Check if user is logged in (customs officer)
     if st.session_state.get("password_correct", False):
         trader_category = "customs_officer"
-    print(trader_category)
+    st.write(trader_category)
     if (threat_assessment['chattingcustoms']['threat_category'].lower() == "none"):
         if trader_category.casefold() == 'expert trader':
             return expert_trader_chatbot.chatting_with_expert_trader(user_query)
