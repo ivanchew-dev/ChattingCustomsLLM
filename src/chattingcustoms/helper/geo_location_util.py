@@ -1,6 +1,5 @@
 import os
 import geoip2.database
-from helper import file_util
 
 def get_location_from_ip_local(ip_address):
     """

@@ -1,5 +1,4 @@
 from helper import prompt_util
-from helper import file_util
 import os
 
 def check_for_potential_threat(user_query:str):

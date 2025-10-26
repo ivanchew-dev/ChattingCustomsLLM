@@ -3,33 +3,34 @@ import os
 import csv
 from typing import List, Any
 
-def find_file_in_parent_directories(filename, start_directory=None):
-    """
-    Recursively searches for a file in the given directory and its parent directories.
 
+def find_file_in_parent_directories(filename: str, start_directory: str = None) -> str:
+    """
+    Searches for a file in the current directory and parent directories.
+    
     Args:
         filename (str): The name of the file to search for.
-        start_directory (str, optional): The directory to start the search from.
-                                         If None, the current working directory is used.
-
+        start_directory (str, optional): Directory to start searching from. 
+                                       If None, uses current working directory.
+    
     Returns:
-        str or None: The full path to the file if found, otherwise None.
+        str: Absolute path to the file if found, None otherwise.
     """
-    print(filename)
     if start_directory is None:
-        current_dir = os.getcwd()
-    else:
-        current_dir = os.path.abspath(start_directory)
-
+        start_directory = os.getcwd()
+    
+    current_dir = os.path.abspath(start_directory)
+    
     while True:
         file_path = os.path.join(current_dir, filename)
-        if os.path.exists(file_path) and os.path.isfile(file_path):
+        if os.path.isfile(file_path):
             return file_path
-
+        
         parent_dir = os.path.dirname(current_dir)
         if parent_dir == current_dir:  # Reached the root directory
             return None
         current_dir = parent_dir
+
 
 def append_to_csv(file_name: str, new_row: List[Any]) -> bool:
     """
@@ -48,12 +49,16 @@ def append_to_csv(file_name: str, new_row: List[Any]) -> bool:
         # If the file does not exist, it will be created.
         # newline='' prevents blank rows from being inserted.
        
+        # Get the root directory path relative to this script location
+        # This script is in src/chattingcustoms/helper/, so go up 3 levels to reach project root
         script_directory = os.path.dirname(os.path.abspath(__file__))
-        app_parent_directory_path= find_file_in_parent_directories(".env",script_directory)[:-4]
+        root_directory = os.path.join(script_directory, "..", "..", "..")
         
-        print(app_parent_directory_path)
-        datastore_path = os.path.join(app_parent_directory_path, "datastore", "appData", "")
-        with open(datastore_path + file_name, 'a', newline='', encoding='utf-8') as file:
+        print(f"Root directory: {os.path.abspath(root_directory)}")
+        datastore_path = os.path.join(root_directory, "datastore", "appData")
+        full_file_path = os.path.join(datastore_path, file_name)
+        
+        with open(full_file_path, 'a', newline='', encoding='utf-8') as file:
 
             # Create a csv.writer object
             writer = csv.writer(file,quoting=csv.QUOTE_STRINGS)
