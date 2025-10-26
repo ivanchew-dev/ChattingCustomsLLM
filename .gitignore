@@ -129,12 +129,17 @@ celerybeat.pid
 
 # Environments
 .env
+*.env
 .venv
 env/
 venv/
 ENV/
 env.bak/
 venv.bak/
+
+# Streamlit
+.streamlit/secrets.toml
+**/secrets.toml
 
 # Spyder project settings
 .spyderproject

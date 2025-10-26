@@ -15,7 +15,7 @@ import altair as alt # Added Altair for the chart
 st.set_page_config(layout="wide", page_title="Simple AI Chat Client")
 
 # Define file paths
-THREAT_DATA_FILE = "/Users/admin/work/Course/20250901_AI_BootCamp/ChattingCustomsLLM/datastore/appData/threatData.csv"
+THREAT_DATA_FILE = os.path.join(os.path.dirname(__file__), "..", "..", "datastore", "appData", "threatData.csv")
 
 
 # --- Data Loading Functions ---
@@ -34,15 +34,22 @@ def load_threat_data_fresh(file_path):
         return pd.DataFrame() # Return empty DataFrame on error
 
 @st.cache_data
-def load_threat_data_cached(file_path, cache_key):        
-    """Load threat data with cache that can be busted by changing cache_key."""
+def load_threat_data_cached(file_path, cache_key, file_mod_time):        
+    """Load threat data with cache that can be busted by changing cache_key or file modification time."""
     try:
+        if not os.path.exists(file_path):
+            st.error(f"Threat data file not found: {file_path}")
+            return pd.DataFrame()
+        
         df = pd.read_csv(file_path)
         # Convert 'date' column to date objects for comparison/filtering
         df['date'] = pd.to_datetime(df['date']).dt.date
         # Ensure numeric columns are correctly typed for map and chart
         df['latitude'] = pd.to_numeric(df['latitude'])
         df['longitude'] = pd.to_numeric(df['longitude'])
+        
+        # Add debug info
+        st.info(f"📁 Loaded {len(df)} records from: {file_path}")
         return df
     except Exception as e:
         st.error(f"Error loading threat data: {e}")
@@ -118,8 +125,14 @@ def display_threat_data_viewer():
     if 'threat_data_cache_key' not in st.session_state:
         st.session_state.threat_data_cache_key = 0
     
-    # Load threat data fresh when this section is accessed
-    threat_df = load_threat_data_cached(THREAT_DATA_FILE, st.session_state.threat_data_cache_key)
+    # Get file modification time for cache invalidation
+    try:
+        file_mod_time = os.path.getmtime(THREAT_DATA_FILE)
+    except OSError:
+        file_mod_time = 0
+    
+    # Load threat data with file modification time for automatic cache busting
+    threat_df = load_threat_data_cached(THREAT_DATA_FILE, st.session_state.threat_data_cache_key, file_mod_time)
     
     # Show data loading status
     current_time = datetime.now().strftime("%H:%M:%S")
