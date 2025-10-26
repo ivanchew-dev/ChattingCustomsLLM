@@ -71,11 +71,10 @@ def route_to_chatbot(user_query:str):
         longitude = lat_log[1]
         st.write("Latitude: ", latitude)
         st.write("Longitude: ", longitude)
-        st.stop()
+
         # Get username safely
         username = st.session_state.get("username", "anonymous")
         st.write("Username: ", username)
-        st.stop()
         data_row = [
             user_query, ip_address, latitude, longitude,
             threat_assessment['chattingcustoms']['threat_category'], 
