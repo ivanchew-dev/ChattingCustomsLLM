@@ -35,20 +35,11 @@ Format answer in plain text
 
 def route_to_chatbot(user_query:str):
     trader_category = trader_categorizer(user_query)
-    st.write("Before threat assessment")
     threat_assessment = json.loads(threat_assessment_chatbot.check_for_potential_threat(user_query))
-    st.write (threat_assessment)
-    st.write(type(threat_assessment))
-    st.write(threat_assessment.keys())
-    st.write(threat_assessment['chattingcustoms']['threat_category'])
-    st.write("Trader Category : ", trader_category)
-    
     # Check if user is logged in (customs officer)
     if st.session_state.get("password_correct", False):
         trader_category = "customs_officer"
         st.write(trader_category)
-    st.write("After threat assessment")
-    st.write("Trader Category : ", trader_category)
     
     if (threat_assessment['chattingcustoms']['threat_category'].lower() == "none"):
         if trader_category.casefold() == 'expert trader':
@@ -61,20 +52,14 @@ def route_to_chatbot(user_query:str):
             return 'We are unable to answer your query as it is not related to import and export'
     else:
         # Handle threat detected - log the incident
-        st.write("Logging Threatening Query...")
         
         ip_address = network_util.get_public_ip()
-        st.write("IP Address: ", ip_address)
-        
         lat_log = geo_location_util.get_location_from_ip_local(ip_address)
         latitude = lat_log[0]
         longitude = lat_log[1]
-        st.write("Latitude: ", latitude)
-        st.write("Longitude: ", longitude)
 
         # Get username safely
         username = st.session_state.get("username", "anonymous")
-        st.write("Username: ", username)
         data_row = [
             user_query, ip_address, latitude, longitude,
             threat_assessment['chattingcustoms']['threat_category'], 
