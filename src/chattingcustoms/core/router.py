@@ -62,7 +62,7 @@ def route_to_chatbot(user_query:str):
     else:
         # Handle threat detected - log the incident
         st.write("Logging Threatening Query...")
-        st.stop()
+        
         ip_address = network_util.get_public_ip()
         
         st.write(ip_address)
@@ -72,7 +72,7 @@ def route_to_chatbot(user_query:str):
         
         # Get username safely
         username = st.session_state.get("username", "anonymous")
-        
+        st.stop()
         data_row = [
             user_query, ip_address, latitude, longitude,
             threat_assessment['chattingcustoms']['threat_category'], 
