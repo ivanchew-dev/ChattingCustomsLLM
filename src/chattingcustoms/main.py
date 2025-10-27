@@ -11,7 +11,7 @@ import altair as alt # Added Altair for the chart
 # --- Configuration and Setup ---
 
 # Set wide layout and page title
-st.set_page_config(layout="wide", page_title="Simple AI Chat Client")
+st.set_page_config(layout="wide", page_title="IMPEX Intelligence Hub")
 
 # Define file paths
 THREAT_DATA_FILE = os.path.join(os.path.dirname(__file__), "..", "..", "datastore", "appData", "threatData.csv")
@@ -285,7 +285,7 @@ with st.sidebar:
 
 if st.session_state.current_view == "chat":
     # --- Chat Interface ---
-    st.title("🤖 AI Chat Interface")
+    st.title("💬 IMPEX Intelligence Assistant")
     st.markdown("Feel free to start chatting! Login is optional.")
 
     # Display chat messages from history
