@@ -254,7 +254,7 @@ with st.sidebar:
     st.header("User Status")
     if not login_util.check_password():  
 
-        st.info("You can chat without logging in.")
+        st.info("You can chat without logging in...")
     else:
         st.success(f"Logged in as: **Customs Officer**")
         
