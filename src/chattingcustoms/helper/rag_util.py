@@ -6,7 +6,8 @@ from langchain_community.document_loaders import TextLoader
 from langchain_openai import OpenAIEmbeddings
 from langchain_experimental.text_splitter import SemanticChunker
 from langchain_community.vectorstores import Chroma
-from langchain.chains.retrieval_qa.base import RetrievalQA
+from langchain.chains import create_retrieval_chain
+from langchain.chains.combine_documents import create_stuff_documents_chain
 from langchain.retrievers.multi_query import MultiQueryRetriever
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
@@ -17,14 +18,15 @@ import logging
 logging.basicConfig()
 logging.getLogger("langchain.retrievers.multi_query").setLevel(logging.INFO)
 
-
-# This is the "Updated" helper function for calling LLM
+# This is the "Updated" helper function for calling LLM - follows project pattern
 ApiKey = key_util.return_open_api_key()
 client = OpenAI(api_key=ApiKey)
 # embedding model that we will use for the session
 embeddings_model = OpenAIEmbeddings(model='text-embedding-3-small')
 llm = ChatOpenAI(model='gpt-4o-mini', temperature=0)
+
 def get_embedding(input, model='text-embedding-3-small'):
+    """Get embeddings using OpenAI API - maintains existing interface"""
     response = client.embeddings.create(
         input=input,
         model=model
@@ -34,7 +36,7 @@ def get_embedding(input, model='text-embedding-3-small'):
 def textloader_for_files_in_directory(directory_path, file_mask):
     """
     Checks if a directory is valid and then processes files within it
-    that match a given mask.
+    that match a given mask - used for loading customs documentation.
 
     Args:
         directory_path (str): The path to the directory.
@@ -69,9 +71,8 @@ def textloader_for_files_in_directory(directory_path, file_mask):
             print(f"Loaded {file_path}")
         return _list_of_documents_loaded
 
-
 def load_rag(directory_path, file_mask):
-   
+    """Load RAG data from customs documentation directory"""
     # load the documents
     list_of_documents_loaded = []
     list_of_documents_loaded = textloader_for_files_in_directory(directory_path, file_mask)
@@ -84,38 +85,63 @@ def load_rag(directory_path, file_mask):
     Chroma.from_documents(splitted_documents, embeddings_model, collection_name='ecommerce_semantic', persist_directory='./vector_db')
     return "Total documents loaded:", len(list_of_documents_loaded)
 
-def rag_query(user_query:str):
+def rag_query(user_query: str):
+    """
+    Query RAG system for customs/trade information using latest LangChain patterns.
+    Returns markdown-formatted response following project conventions.
+    """
     logging.basicConfig()
     logging.getLogger("langchain.retrievers.multi_query").setLevel(logging.INFO)
+    
     # Load existing Chroma vector database
     vectordb = Chroma(
         collection_name='ecommerce_semantic', 
         persist_directory='./vector_db',
         embedding_function=embeddings_model
     )
-    qa_chain_retrieval_process = RetrievalQA.from_chain_type(
-                    llm=llm,
-                    retriever=vectordb.as_retriever()
-                    )
-    results = qa_chain_retrieval_process.invoke(user_query)
-    if "don't know" in results['result']: 
-        retriever_multiquery = MultiQueryRetriever.from_llm(
-                    retriever=vectordb.as_retriever(), llm=llm
-                )
-        retriever = vectordb.as_retriever(search_type='mmr',
-                                  search_kwargs={'k': 2, 'fetch_k': 3})
-        qa_chain_multiquery_process = RetrievalQA.from_chain_type(
-                    llm=llm,
-                    retriever=retriever_multiquery
-                    )
-        result=qa_chain_multiquery_process.invoke(user_query)
-        return "Retrieval Multi : " + result['result']
-    #print(embeddings_model)
-    else:
-        return "Retrieval QA : " + results['result']
     
-def create_rag_prompt(message:str):
-   prompt = ChatPromptTemplate.from_template(
-    message
-)
-   return prompt
+    # Create system prompt for customs/trade domain - follows project's prompt engineering pattern
+    system_prompt = (
+        "You are an assistant for question-answering tasks related to customs, trade, and Singapore customs workflows. "
+        "Use the following pieces of retrieved context to answer the question. "
+        "If you don't know the answer, say that you don't know. "
+        "Provide step-by-step explanations in markdown format when applicable. "
+        "Use three sentences maximum and keep the answer concise."
+        "\n\n"
+        "{context}"
+    )
+    
+    # Create prompt template following project's ChatPromptTemplate pattern
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", system_prompt),
+        ("human", "{input}"),
+    ])
+    
+    # Create the document chain using latest LangChain methods
+    question_answer_chain = create_stuff_documents_chain(llm, prompt)
+    
+    # Create the retrieval chain
+    retrieval_chain = create_retrieval_chain(vectordb.as_retriever(), question_answer_chain)
+    
+    # Execute the chain
+    results = retrieval_chain.invoke({"input": user_query})
+    
+    # Follow project pattern for fallback logic when answer is uncertain
+    if "don't know" in results['answer']: 
+        # Use MultiQueryRetriever for enhanced retrieval - follows existing pattern
+        retriever_multiquery = MultiQueryRetriever.from_llm(
+            retriever=vectordb.as_retriever(), llm=llm
+        )
+        
+        # Create retrieval chain with multi-query retriever
+        multiquery_chain = create_retrieval_chain(retriever_multiquery, question_answer_chain)
+        result = multiquery_chain.invoke({"input": user_query})
+        return "Retrieval Multi : " + result['answer']
+    else:
+        # Return primary result with project's response format
+        return "Retrieval QA : " + results['answer']
+    
+def create_rag_prompt(message: str):
+    """Create RAG prompt template - maintains existing interface"""
+    prompt = ChatPromptTemplate.from_template(message)
+    return prompt
