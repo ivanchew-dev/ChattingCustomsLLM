@@ -119,7 +119,7 @@ def display_threat_data_viewer():
                 st.session_state.threat_data_cache_key += 1
             else:
                 st.session_state.threat_data_cache_key = 1
-            st.success("Data refreshed!")
+            st.success("Data refreshed!!")
     
     # Initialize cache key if not exists
     if 'threat_data_cache_key' not in st.session_state:
