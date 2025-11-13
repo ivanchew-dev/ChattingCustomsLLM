@@ -1,5 +1,5 @@
 from helper import prompt_util
-#from helper import rag_util
+from helper import rag_util
 
 extraction_list = """
 XML Tag Mapping for Trade Declaration Fields:
