@@ -6,7 +6,7 @@ from helper import geo_location_util
 from core import expert_trader_chatbot
 from core import self_service_trader_chatbot
 from core import threat_assessment_chatbot
-from core import tno_chatbot
+#from core import tno_chatbot
 
 import json
 import datetime
