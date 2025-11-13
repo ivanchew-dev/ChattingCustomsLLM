@@ -3,7 +3,7 @@ from helper import login_util
 import pandas as pd
 from datetime import datetime, timedelta # Added timedelta
 from core import router
-#from helper import rag_util
+from helper import rag_util
 import os
 import altair as alt # Added Altair for the chart
 
@@ -85,8 +85,8 @@ def handle_chat_input(prompt):
         st.session_state.messages.append({"role": "user", "content": prompt})
         with st.spinner("AI is thinking..."):
             try:
-   #             ai_response = router.route_to_chatbot(prompt)
-                ai_response = "did not think"
+                ai_response = router.route_to_chatbot(prompt)
+                #ai_response = "did not think"
             except Exception as e:
                 ai_response = f"**Error:** Could not connect to AI service. *Router error: {e}*"
 
