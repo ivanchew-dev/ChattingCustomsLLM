@@ -7,10 +7,9 @@ from langchain_openai import OpenAIEmbeddings
 from langchain_experimental.text_splitter import SemanticChunker
 from langchain_community.vectorstores import Chroma
 from langchain.retrievers.multi_query import MultiQueryRetriever
-from langchain.chains import create_retrieval_chain
-from langchain.chains.combine_documents import create_stuff_documents_chain
+from langchain.chains.retrieval_qa.base import RetrievalQA
 from langchain_openai import ChatOpenAI
-from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.prompts import PromptTemplate
 import logging
 
 # Refer to LangChain documentation to find which loggers to set
@@ -87,8 +86,9 @@ def load_rag(directory_path, file_mask):
 
 def rag_query(user_query: str):
     """
-    Query RAG system for customs/trade information using latest LangChain patterns.
+    Query RAG system for customs/trade information using langchain-classic patterns.
     Returns markdown-formatted response following project conventions.
+    Follows project's step-by-step reasoning approach similar to tno_chatbot.py.
     """
     logging.basicConfig()
     logging.getLogger("langchain.retrievers.multi_query").setLevel(logging.INFO)
@@ -100,48 +100,61 @@ def rag_query(user_query: str):
         embedding_function=embeddings_model
     )
     
-    # Create system prompt for customs/trade domain - follows project's prompt engineering pattern
-    system_prompt = (
-        "You are an assistant for question-answering tasks related to customs, trade, and Singapore customs workflows. "
-        "Use the following pieces of retrieved context to answer the question. "
-        "If you don't know the answer, say that you don't know. "
-        "Provide step-by-step explanations in markdown format when applicable. "
-        "Use three sentences maximum and keep the answer concise."
-        "\n\n"
-        "{context}"
+    # Create prompt template for customs/trade domain - follows project's prompt engineering pattern
+    # Using classic PromptTemplate with single template string
+    template = """You are an assistant for question-answering tasks related to customs, trade, and Singapore customs workflows.
+Use the following pieces of retrieved context to answer the question.
+If you don't know the answer, say that you don't know.
+Provide step-by-step explanations in markdown format when applicable.
+Use three sentences maximum and keep the answer concise.
+
+Context: {context}
+
+Question: {question}
+
+Answer:"""
+    
+    # Create classic prompt template
+    prompt = PromptTemplate(
+        template=template,
+        input_variables=["context", "question"]
     )
     
-    # Create prompt template following project's ChatPromptTemplate pattern
-    prompt = ChatPromptTemplate.from_messages([
-        ("system", system_prompt),
-        ("human", "{input}"),
-    ])
+    # Create RetrievalQA chain using classic from_chain_type method - follows project pattern
+    qa_chain = RetrievalQA.from_chain_type(
+        llm=llm,
+        chain_type="stuff",
+        retriever=vectordb.as_retriever(),
+        chain_type_kwargs={"prompt": prompt},
+        return_source_documents=True
+    )
     
-    # Create the document chain using latest LangChain methods
-    question_answer_chain = create_stuff_documents_chain(llm, prompt)
-    
-    # Create the retrieval chain
-    retrieval_chain = create_retrieval_chain(vectordb.as_retriever(), question_answer_chain)
-    
-    # Execute the chain
-    results = retrieval_chain.invoke({"input": user_query})
+    # Execute the classic chain
+    results = qa_chain({"query": user_query})
     
     # Follow project pattern for fallback logic when answer is uncertain
-    if "don't know" in results['answer']: 
+    if "don't know" in results['result']:
         # Use MultiQueryRetriever for enhanced retrieval - follows existing pattern
         retriever_multiquery = MultiQueryRetriever.from_llm(
             retriever=vectordb.as_retriever(), llm=llm
         )
         
-        # Create retrieval chain with multi-query retriever
-        multiquery_chain = create_retrieval_chain(retriever_multiquery, question_answer_chain)
-        result = multiquery_chain.invoke({"input": user_query})
-        return "Retrieval Multi : " + result['answer']
+        # Create RetrievalQA with multi-query retriever using classic pattern
+        multiquery_qa = RetrievalQA.from_chain_type(
+            llm=llm,
+            chain_type="stuff",
+            retriever=retriever_multiquery,
+            chain_type_kwargs={"prompt": prompt},
+            return_source_documents=True
+        )
+        
+        result = multiquery_qa({"query": user_query})
+        return "Retrieval Multi : " + result['result']
     else:
         # Return primary result with project's response format
-        return "Retrieval QA : " + results['answer']
+        return "Retrieval QA : " + results['result']
     
 def create_rag_prompt(message: str):
-    """Create RAG prompt template - maintains existing interface"""
-    prompt = ChatPromptTemplate.from_template(message)
+    """Create RAG prompt template using classic PromptTemplate - maintains existing interface"""
+    prompt = PromptTemplate.from_template(message)
     return prompt

@@ -7,15 +7,15 @@ python-dotenv>=1.0.0
 # Data Visualization
 altair>=5.0.0
 
-# LangChain and RAG Dependencies - Latest Versions
+# LangChain Classic Dependencies - Stable Versions
 langchain<0.3.0
-langchain-openai>=0.2.0
-langchain-community>=0.3.0
-langchain-experimental>=0.3.0
-langchain-core>=0.3.0
+langchain-openai>=0.1.0,<0.3.0
+langchain-community>=0.0.29,<0.3.0
+langchain-experimental>=0.0.57,<0.3.0
+langchain-core>=0.1.0,<0.3.0
 
 # Vector Database and Retrieval
-chromadb>=0.5.0
+chromadb>=0.4.0,<0.6.0
 
 # Geolocation for customs workflows
 geoip2>=4.7.0
