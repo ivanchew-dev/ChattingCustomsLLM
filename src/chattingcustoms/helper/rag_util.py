@@ -15,14 +15,16 @@ import shutil
 
 # Disable ChromaDB telemetry completely - follows project pattern for error prevention
 os.environ["ANONYMIZED_TELEMETRY"] = "False"
+os.environ["CHROMA_DB_IMPL"] = "duckdb+parquet"
 import chromadb
 from chromadb.config import Settings
 
-# Configure ChromaDB with proper settings to prevent schema issues
+# Configure ChromaDB with explicit tenant settings to prevent connection issues
 chromadb_settings = Settings(
     anonymized_telemetry=False,
     allow_reset=True,
-    is_persistent=True
+    is_persistent=True,
+    persist_directory="./vector_db"
 )
 
 # Refer to LangChain documentation to find which loggers to set
@@ -90,27 +92,49 @@ def textloader_for_files_in_directory(directory_path, file_mask):
 
 def reset_vector_db(persist_directory):
     """
-    Reset vector database to fix schema issues - follows project's error handling pattern.
-    Similar to how core chatbots handle data validation errors.
+    Reset vector database to fix tenant and schema issues - follows project's error handling pattern.
+    Similar to how core chatbots handle data validation errors like YOUARELATE, NOEMPTYDATAOFDEPARTURE.
     """
     if os.path.exists(persist_directory):
         print(f"Resetting vector database at {persist_directory}")
         shutil.rmtree(persist_directory)
         print("Vector database reset complete")
 
+def create_chroma_client():
+    """
+    Create ChromaDB client with proper tenant configuration.
+    Follows project's initialization pattern for external data connections.
+    """
+    try:
+        # Create client with explicit settings to avoid tenant issues
+        client = chromadb.PersistentClient(
+            path="./vector_db",
+            settings=chromadb_settings
+        )
+        return client
+    except Exception as e:
+        print(f"Error creating ChromaDB client: {e}")
+        # Reset and retry - follows project's error recovery pattern
+        reset_vector_db("./vector_db")
+        client = chromadb.PersistentClient(
+            path="./vector_db",
+            settings=chromadb_settings
+        )
+        return client
+
 def load_rag(directory_path, file_mask):
     """
-    Load RAG data from customs documentation directory - uses langchain-chroma with error handling.
+    Load RAG data from customs documentation directory - uses langchain-chroma with tenant handling.
     Follows project's data loading pattern from datastore/ragData for customs documentation.
     """
     vector_db_path = './vector_db'
     
     try:
-        # load the documents
+        # load the documents following project's textloader pattern
         list_of_documents_loaded = textloader_for_files_in_directory(directory_path, file_mask)
         
         if not list_of_documents_loaded:
-            return "No documents loaded - check directory path and file mask"
+            return "NORAGDATA: No documents loaded - check directory path and file mask"
             
         print("Total documents loaded:", len(list_of_documents_loaded))
         
@@ -120,42 +144,51 @@ def load_rag(directory_path, file_mask):
         # Split the documents into smaller chunks
         splitted_documents = text_splitter.split_documents(list_of_documents_loaded)
         
-        # Try to create vector store - if it fails due to schema issues, reset and retry
+        # Create ChromaDB client with proper tenant handling
+        chroma_client = create_chroma_client()
+        
+        # Try to create vector store with explicit client - prevents tenant issues
         try:
-            # Use langchain-chroma for vector storage - follows project's customs documentation pattern
-            Chroma.from_documents(
-                splitted_documents, 
-                embeddings_model, 
-                collection_name='ecommerce_semantic', 
+            vectorstore = Chroma.from_documents(
+                documents=splitted_documents,
+                embedding=embeddings_model,
+                collection_name='customs_semantic',
                 persist_directory=vector_db_path,
-                client_settings=chromadb_settings
+                client=chroma_client
             )
+            print("Vector store created successfully")
+            
         except Exception as e:
-            if "no such column" in str(e).lower():
-                print(f"Schema error detected: {e}")
+            if "tenant" in str(e).lower() or "default_tenant" in str(e).lower():
+                print(f"Tenant connection error detected: {e}")
                 print("Resetting vector database and retrying...")
                 reset_vector_db(vector_db_path)
                 
-                # Retry after reset
-                Chroma.from_documents(
-                    splitted_documents, 
-                    embeddings_model, 
-                    collection_name='ecommerce_semantic', 
+                # Retry with fresh client after reset
+                chroma_client = create_chroma_client()
+                vectorstore = Chroma.from_documents(
+                    documents=splitted_documents,
+                    embedding=embeddings_model,
+                    collection_name='customs_semantic',
                     persist_directory=vector_db_path,
-                    client_settings=chromadb_settings
+                    client=chroma_client
                 )
             else:
                 raise e
                 
-        return f"Total documents loaded: {len(list_of_documents_loaded)}"
+        return f"RAG_LOADED: {len(list_of_documents_loaded)} documents processed successfully"
         
     except Exception as e:
         print(f"Error in load_rag: {e}")
-        return f"Error loading RAG data: {str(e)}"
+        # Follow project's error code pattern like YOUARELATE, NOEMPTYDATAOFDEPARTURE
+        if "tenant" in str(e).lower():
+            return "RAG_TENANT_ERROR: Vector database tenant connection failed"
+        else:
+            return f"RAG_ERROR: {str(e)}"
 
 def rag_query(user_query: str):
     """
-    Query RAG system for customs/trade information using langchain-classic patterns with langchain-chroma.
+    Query RAG system for customs/trade information using langchain-classic patterns.
     Returns markdown-formatted response following project conventions.
     Follows project's step-by-step reasoning approach similar to tno_chatbot.py.
     """
@@ -163,16 +196,19 @@ def rag_query(user_query: str):
         logging.basicConfig()
         logging.getLogger("langchain.retrievers.multi_query").setLevel(logging.INFO)
         
-        # Load existing Chroma vector database using langchain-chroma with proper settings
+        # Create ChromaDB client with proper tenant handling
+        chroma_client = create_chroma_client()
+        
+        # Load existing Chroma vector database with explicit client configuration
         vectordb = Chroma(
-            collection_name='ecommerce_semantic', 
+            collection_name='customs_semantic', 
             persist_directory='./vector_db',
             embedding_function=embeddings_model,
-            client_settings=chromadb_settings
+            client=chroma_client
         )
         
         # Create prompt template for customs/trade domain - follows project's prompt engineering pattern
-        # Using classic PromptTemplate with single template string following tno_chatbot.py style
+        # Using step-by-step reasoning similar to tno_chatbot.py
         template = """You are an assistant for question-answering tasks related to customs, trade, and Singapore customs workflows.
 Use the following pieces of retrieved context to answer the question.
 If you don't know the answer, say that you don't know.
@@ -220,17 +256,19 @@ Answer:"""
             )
             
             result = multiquery_qa({"query": user_query})
-            return "Retrieval Multi : " + result['result']
+            return "**Retrieval Multi:** " + result['result']
         else:
-            # Return primary result with project's response format
-            return "Retrieval QA : " + results['result']
+            # Return primary result with project's markdown response format
+            return "**Retrieval QA:** " + results['result']
             
     except Exception as e:
         # Follow project's error handling pattern - return specific error responses
-        if "no such column" in str(e).lower():
-            return "RAG_DB_SCHEMA_ERROR: Vector database needs to be rebuilt. Please reload RAG data."
+        if "tenant" in str(e).lower() or "default_tenant" in str(e).lower():
+            return "**RAG_TENANT_ERROR:** Vector database tenant connection failed. Please reload RAG data."
+        elif "no such column" in str(e).lower():
+            return "**RAG_DB_SCHEMA_ERROR:** Vector database needs to be rebuilt. Please reload RAG data."
         else:
-            return f"RAG_ERROR: {str(e)}"
+            return f"**RAG_ERROR:** {str(e)}"
     
 def create_rag_prompt(message: str):
     """Create RAG prompt template using classic PromptTemplate - maintains existing interface"""
