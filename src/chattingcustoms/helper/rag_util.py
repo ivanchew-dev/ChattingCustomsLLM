@@ -12,6 +12,10 @@ from langchain_openai import ChatOpenAI
 from langchain_core.prompts import PromptTemplate
 import logging
 
+# Disable ChromaDB telemetry to prevent PostHog version conflicts
+import chromadb
+chromadb.config.Settings(anonymized_telemetry=False)
+
 # Refer to LangChain documentation to find which loggers to set
 # Different LangChain Classes/Modules have different loggers to set
 logging.basicConfig()
@@ -71,7 +75,7 @@ def textloader_for_files_in_directory(directory_path, file_mask):
         return _list_of_documents_loaded
 
 def load_rag(directory_path, file_mask):
-    """Load RAG data from customs documentation directory - uses langchain-chroma"""
+    """Load RAG data from customs documentation directory - uses langchain-chroma with telemetry disabled"""
     # load the documents
     list_of_documents_loaded = []
     list_of_documents_loaded = textloader_for_files_in_directory(directory_path, file_mask)
@@ -81,8 +85,14 @@ def load_rag(directory_path, file_mask):
 
     # Split the documents into smaller chunks
     splitted_documents = text_splitter.split_documents(list_of_documents_loaded)
-    # Use langchain-chroma for vector storage - follows project's customs documentation pattern
-    Chroma.from_documents(splitted_documents, embeddings_model, collection_name='ecommerce_semantic', persist_directory='./vector_db')
+    
+    # Use langchain-chroma for vector storage with telemetry disabled - follows project's customs documentation pattern
+    Chroma.from_documents(
+        splitted_documents, 
+        embeddings_model, 
+        collection_name='ecommerce_semantic', 
+        persist_directory='./vector_db'
+    )
     return "Total documents loaded:", len(list_of_documents_loaded)
 
 def rag_query(user_query: str):
@@ -94,7 +104,7 @@ def rag_query(user_query: str):
     logging.basicConfig()
     logging.getLogger("langchain.retrievers.multi_query").setLevel(logging.INFO)
     
-    # Load existing Chroma vector database using langchain-chroma
+    # Load existing Chroma vector database using langchain-chroma with telemetry disabled
     vectordb = Chroma(
         collection_name='ecommerce_semantic', 
         persist_directory='./vector_db',
