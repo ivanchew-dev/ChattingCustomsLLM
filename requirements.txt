@@ -15,8 +15,7 @@ langchain-experimental>=0.0.57,<0.3.0
 langchain-core>=0.1.0,<0.3.0
 
 # Vector Database and Retrieval
-chromadb>=0.4.0,<0.6.0
-posthog>=2.4.0,<4.8.0 
+langchain-chroma>=0.1.0
 
 # Geolocation for customs workflows
 geoip2>=4.7.0

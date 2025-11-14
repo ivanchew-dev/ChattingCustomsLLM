@@ -5,7 +5,7 @@ from helper import key_util
 from langchain_community.document_loaders import TextLoader
 from langchain_openai import OpenAIEmbeddings
 from langchain_experimental.text_splitter import SemanticChunker
-from langchain_community.vectorstores import Chroma
+from langchain_chroma import Chroma
 from langchain.retrievers.multi_query import MultiQueryRetriever
 from langchain.chains.retrieval_qa.base import RetrievalQA
 from langchain_openai import ChatOpenAI
@@ -71,7 +71,7 @@ def textloader_for_files_in_directory(directory_path, file_mask):
         return _list_of_documents_loaded
 
 def load_rag(directory_path, file_mask):
-    """Load RAG data from customs documentation directory"""
+    """Load RAG data from customs documentation directory - uses langchain-chroma"""
     # load the documents
     list_of_documents_loaded = []
     list_of_documents_loaded = textloader_for_files_in_directory(directory_path, file_mask)
@@ -81,19 +81,20 @@ def load_rag(directory_path, file_mask):
 
     # Split the documents into smaller chunks
     splitted_documents = text_splitter.split_documents(list_of_documents_loaded)
+    # Use langchain-chroma for vector storage - follows project's customs documentation pattern
     Chroma.from_documents(splitted_documents, embeddings_model, collection_name='ecommerce_semantic', persist_directory='./vector_db')
     return "Total documents loaded:", len(list_of_documents_loaded)
 
 def rag_query(user_query: str):
     """
-    Query RAG system for customs/trade information using langchain-classic patterns.
+    Query RAG system for customs/trade information using langchain-classic patterns with langchain-chroma.
     Returns markdown-formatted response following project conventions.
     Follows project's step-by-step reasoning approach similar to tno_chatbot.py.
     """
     logging.basicConfig()
     logging.getLogger("langchain.retrievers.multi_query").setLevel(logging.INFO)
     
-    # Load existing Chroma vector database
+    # Load existing Chroma vector database using langchain-chroma
     vectordb = Chroma(
         collection_name='ecommerce_semantic', 
         persist_directory='./vector_db',
@@ -101,7 +102,7 @@ def rag_query(user_query: str):
     )
     
     # Create prompt template for customs/trade domain - follows project's prompt engineering pattern
-    # Using classic PromptTemplate with single template string
+    # Using classic PromptTemplate with single template string following tno_chatbot.py style
     template = """You are an assistant for question-answering tasks related to customs, trade, and Singapore customs workflows.
 Use the following pieces of retrieved context to answer the question.
 If you don't know the answer, say that you don't know.
@@ -114,7 +115,7 @@ Question: {question}
 
 Answer:"""
     
-    # Create classic prompt template
+    # Create classic prompt template following project's prompt_util pattern
     prompt = PromptTemplate(
         template=template,
         input_variables=["context", "question"]
