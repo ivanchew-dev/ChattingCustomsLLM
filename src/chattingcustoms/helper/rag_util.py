@@ -27,6 +27,9 @@ chromadb_settings = Settings(
     persist_directory="./vector_db"
 )
 
+# Global client instance to prevent multiple Chroma instances - follows project's singleton pattern
+_chroma_client = None
+
 # Refer to LangChain documentation to find which loggers to set
 # Different LangChain Classes/Modules have different loggers to set
 logging.basicConfig()
@@ -95,36 +98,44 @@ def reset_vector_db(persist_directory):
     Reset vector database to fix tenant and schema issues - follows project's error handling pattern.
     Similar to how core chatbots handle data validation errors like YOUARELATE, NOEMPTYDATAOFDEPARTURE.
     """
+    global _chroma_client
+    _chroma_client = None  # Reset global client instance
+    
     if os.path.exists(persist_directory):
         print(f"Resetting vector database at {persist_directory}")
         shutil.rmtree(persist_directory)
         print("Vector database reset complete")
 
-def create_chroma_client():
+def get_chroma_client():
     """
-    Create ChromaDB client with proper tenant configuration.
-    Follows project's initialization pattern for external data connections.
+    Get or create ChromaDB client with singleton pattern to prevent multiple instances.
+    Follows project's initialization pattern for external data connections like GeoLite2-City.mmdb.
     """
-    try:
-        # Create client with explicit settings to avoid tenant issues
-        client = chromadb.PersistentClient(
-            path="./vector_db",
-            settings=chromadb_settings
-        )
-        return client
-    except Exception as e:
-        print(f"Error creating ChromaDB client: {e}")
-        # Reset and retry - follows project's error recovery pattern
-        reset_vector_db("./vector_db")
-        client = chromadb.PersistentClient(
-            path="./vector_db",
-            settings=chromadb_settings
-        )
-        return client
+    global _chroma_client
+    
+    if _chroma_client is None:
+        try:
+            # Create client with explicit settings to avoid tenant issues
+            _chroma_client = chromadb.PersistentClient(
+                path="./vector_db",
+                settings=chromadb_settings
+            )
+            print("ChromaDB client created successfully")
+        except Exception as e:
+            print(f"Error creating ChromaDB client: {e}")
+            # Reset and retry - follows project's error recovery pattern
+            reset_vector_db("./vector_db")
+            _chroma_client = chromadb.PersistentClient(
+                path="./vector_db",
+                settings=chromadb_settings
+            )
+            print("ChromaDB client created after reset")
+    
+    return _chroma_client
 
 def load_rag(directory_path, file_mask):
     """
-    Load RAG data from customs documentation directory - uses langchain-chroma with tenant handling.
+    Load RAG data from customs documentation directory - uses langchain-chroma with instance handling.
     Follows project's data loading pattern from datastore/ragData for customs documentation.
     """
     vector_db_path = './vector_db'
@@ -144,11 +155,19 @@ def load_rag(directory_path, file_mask):
         # Split the documents into smaller chunks
         splitted_documents = text_splitter.split_documents(list_of_documents_loaded)
         
-        # Create ChromaDB client with proper tenant handling
-        chroma_client = create_chroma_client()
+        # Get singleton ChromaDB client to prevent multiple instances
+        chroma_client = get_chroma_client()
         
-        # Try to create vector store with explicit client - prevents tenant issues
+        # Try to create vector store with explicit client - prevents instance conflicts
         try:
+            # Check if collection already exists and delete it to avoid conflicts
+            try:
+                existing_collection = chroma_client.get_collection(name='customs_semantic')
+                chroma_client.delete_collection(name='customs_semantic')
+                print("Existing collection deleted")
+            except Exception:
+                print("No existing collection found, proceeding with creation")
+            
             vectorstore = Chroma.from_documents(
                 documents=splitted_documents,
                 embedding=embeddings_model,
@@ -159,13 +178,29 @@ def load_rag(directory_path, file_mask):
             print("Vector store created successfully")
             
         except Exception as e:
-            if "tenant" in str(e).lower() or "default_tenant" in str(e).lower():
+            error_msg = str(e).lower()
+            if "instance of chroma already exists" in error_msg or "different settings" in error_msg:
+                print(f"Chroma instance conflict detected: {e}")
+                print("Resetting vector database and retrying...")
+                reset_vector_db(vector_db_path)
+                
+                # Retry with fresh client after reset
+                chroma_client = get_chroma_client()
+                vectorstore = Chroma.from_documents(
+                    documents=splitted_documents,
+                    embedding=embeddings_model,
+                    collection_name='customs_semantic',
+                    persist_directory=vector_db_path,
+                    client=chroma_client
+                )
+                print("Vector store created after instance reset")
+            elif "tenant" in error_msg or "default_tenant" in error_msg:
                 print(f"Tenant connection error detected: {e}")
                 print("Resetting vector database and retrying...")
                 reset_vector_db(vector_db_path)
                 
                 # Retry with fresh client after reset
-                chroma_client = create_chroma_client()
+                chroma_client = get_chroma_client()
                 vectorstore = Chroma.from_documents(
                     documents=splitted_documents,
                     embedding=embeddings_model,
@@ -181,7 +216,10 @@ def load_rag(directory_path, file_mask):
     except Exception as e:
         print(f"Error in load_rag: {e}")
         # Follow project's error code pattern like YOUARELATE, NOEMPTYDATAOFDEPARTURE
-        if "tenant" in str(e).lower():
+        error_msg = str(e).lower()
+        if "instance of chroma already exists" in error_msg:
+            return "RAG_INSTANCE_ERROR: Chroma instance conflict - vector database reset required"
+        elif "tenant" in error_msg:
             return "RAG_TENANT_ERROR: Vector database tenant connection failed"
         else:
             return f"RAG_ERROR: {str(e)}"
@@ -196,8 +234,8 @@ def rag_query(user_query: str):
         logging.basicConfig()
         logging.getLogger("langchain.retrievers.multi_query").setLevel(logging.INFO)
         
-        # Create ChromaDB client with proper tenant handling
-        chroma_client = create_chroma_client()
+        # Get singleton ChromaDB client to prevent instance conflicts
+        chroma_client = get_chroma_client()
         
         # Load existing Chroma vector database with explicit client configuration
         vectordb = Chroma(
@@ -263,9 +301,12 @@ Answer:"""
             
     except Exception as e:
         # Follow project's error handling pattern - return specific error responses
-        if "tenant" in str(e).lower() or "default_tenant" in str(e).lower():
+        error_msg = str(e).lower()
+        if "instance of chroma already exists" in error_msg:
+            return "**RAG_INSTANCE_ERROR:** Chroma instance conflict detected. Please reload RAG data."
+        elif "tenant" in error_msg or "default_tenant" in error_msg:
             return "**RAG_TENANT_ERROR:** Vector database tenant connection failed. Please reload RAG data."
-        elif "no such column" in str(e).lower():
+        elif "no such column" in error_msg:
             return "**RAG_DB_SCHEMA_ERROR:** Vector database needs to be rebuilt. Please reload RAG data."
         else:
             return f"**RAG_ERROR:** {str(e)}"
