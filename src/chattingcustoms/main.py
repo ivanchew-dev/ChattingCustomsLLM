@@ -62,7 +62,7 @@ if "logged_in" not in st.session_state:
 if "username" not in st.session_state:
     st.session_state.username = None
     
-# State variable to manage the current main view
+# State variable to manage the current main view - extended for about page
 if "current_view" not in st.session_state:
     st.session_state.current_view = "chat" # Default is chat
 
@@ -244,7 +244,127 @@ def display_threat_data_viewer():
         st.divider()
     else:
         st.warning("Threat data is not available.")
+
+# --- About Us Page Function ---
+
+def display_about_us():
+    """Displays the About Us page with project overview and benefits."""
+    st.title("🏛️ About IMPEX Intelligence Hub")
+    
+    # Project Overview Section
+    st.header("🎯 Project Overview")
+    st.markdown("""
+    **IMPEX Intelligence Hub** is an advanced modular chatbot system designed specifically for customs and trade-related workflows, 
+    with a focus on Singapore customs operations. Our platform leverages cutting-edge AI technology to streamline customs processes, 
+    enhance threat detection, and provide intelligent assistance to both citizens and customs officers.
+    """)
+    
+    st.divider()
+    
+    # Critical Features Section
+    st.header("✨ Critical Features")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.subheader("🤖 AI-Powered Assistance")
+        st.markdown("""
+        - **Intelligent Query Routing**: Specialized chatbots for different customs domains
+        - **Step-by-Step Reasoning**: Clear explanations following customs regulations
+        - **XML-like Input Processing**: Structured query handling for complex trade scenarios
+        - **RAG-Enhanced Responses**: Document retrieval for accurate customs guidance
+        """)
         
+        st.subheader("🛡️ Threat Assessment")
+        st.markdown("""
+        - **Real-time Threat Detection**: Monitor and analyze security risks
+        - **Geographic Threat Mapping**: Visual representation of threat locations
+        - **Trend Analysis**: 7-day threat pattern visualization
+        - **Category-based Filtering**: Detailed threat classification system
+        """)
+    
+    with col2:
+        st.subheader("📊 Data Intelligence")
+        st.markdown("""
+        - **Interactive Data Visualization**: Charts and maps for threat analysis
+        - **Geolocation Integration**: IP-based location tracking capabilities
+        - **CSV Data Processing**: Efficient handling of customs data files
+        - **Real-time Data Refresh**: Live updates from customs databases
+        """)
+        
+        st.subheader("🔧 Modular Architecture")
+        st.markdown("""
+        - **Domain-Specific Bots**: TNO, Expert Trader, Threat Assessment chatbots
+        - **Helper Utilities**: File, network, prompt, and key management tools
+        - **Flexible Routing System**: Dynamic dispatch to appropriate specialists
+        - **Error Handling**: Robust validation with specific error codes
+        """)
+    
+    st.divider()
+    
+    # Benefits Section
+    st.header("🌟 Benefits for Citizens & Customs Officers")
+    
+    # Citizens Benefits
+    st.subheader("👥 For Citizens & Traders")
+    citizen_benefits = st.container()
+    with citizen_benefits:
+        col1, col2 = st.columns([1, 3])
+        with col1:
+            st.markdown("**🚀 Faster Processing**")
+            st.markdown("**💡 24/7 Availability**")
+            st.markdown("**📋 Clear Guidance**")
+            st.markdown("**🎯 Accurate Information**")
+        with col2:
+            st.markdown("Get instant responses to customs queries without waiting in queues")
+            st.markdown("Access customs assistance anytime, reducing business delays")
+            st.markdown("Step-by-step explanations for complex trade regulations and procedures")
+            st.markdown("AI-powered responses backed by official customs documentation")
+    
+    st.markdown("---")
+    
+    # Customs Officers Benefits
+    st.subheader("👮‍♂️ For Customs Officers")
+    officer_benefits = st.container()
+    with officer_benefits:
+        col1, col2 = st.columns([1, 3])
+        with col1:
+            st.markdown("**🛡️ Enhanced Security**")
+            st.markdown("**📊 Data Insights**")
+            st.markdown("**⚡ Operational Efficiency**")
+            st.markdown("**🎯 Decision Support**")
+        with col2:
+            st.markdown("Real-time threat detection and geographic risk visualization")
+            st.markdown("Interactive dashboards for threat trends and pattern analysis")
+            st.markdown("Automated query routing reduces manual workload and response time")
+            st.markdown("AI-assisted recommendations for complex customs decisions")
+    
+    st.divider()
+    
+    # Technical Architecture
+    st.header("🏗️ Technical Excellence")
+    st.markdown("""
+    Built on a **modular architecture** with specialized chatbots (`tno_chatbot.py`, `expert_trader_chatbot.py`, `threat_assessment_chatbot.py`) 
+    that handle domain-specific customs workflows. The system uses **prompt engineering** for step-by-step reasoning, 
+    **rule-based decision making** for customs regulations, and **RAG technology** for document-enhanced responses.
+    
+    **Key Components:**
+    - `router.py` for intelligent query dispatch
+    - `helper/` utilities for file, network, and prompt management  
+    - `datastore/` integration for threat data and geolocation services
+    - Streamlit-based interface for user-friendly interaction
+    """)
+    
+    st.divider()
+    
+    # Footer
+    st.markdown("""
+    ---
+    **IMPEX Intelligence Hub** - Transforming customs operations through intelligent automation and data-driven insights.
+    
+    *Empowering citizens with instant access to customs guidance while providing officers with advanced tools for security and efficiency.*
+    """)
+
 # --- Sidebar (Left) ---
 
 with st.sidebar:
@@ -254,32 +374,50 @@ with st.sidebar:
     ## 1. User Login / Status
     st.header("User Status")
     if not login_util.check_password():  
-
         st.info("You can chat without logging in...")
     else:
         st.success(f"Logged in as: **Customs Officer**")
-        
-        # 💡 Navigation Toggling button logic
-        if st.session_state.current_view == "chat":
-            button_label = "View Threat Data 🛡️"
-            next_view = "data"
+    
+    st.divider()
+    
+    ## 2. Navigation Menu - Enhanced with About Us
+    st.header("📍 Navigation")
+    
+    # Navigation buttons with current view highlighting
+    nav_options = {
+        "chat": {"label": "💬 Chat Interface", "icon": "🤖"},
+        "data": {"label": "🛡️ Threat Data", "icon": "📊"}, 
+        "about": {"label": "🏛️ About Us", "icon": "ℹ️"}
+    }
+    
+    for view_key, view_info in nav_options.items():
+        # Highlight current view
+        if st.session_state.current_view == view_key:
+            button_style = "🔹"  # Current view indicator
         else:
-            button_label = "View Chat Interface 🤖"
-            next_view = "chat"
+            button_style = ""
             
-        if st.button(button_label, key="view_toggle_button"):
-            st.session_state.current_view = next_view
-            st.rerun()
-
-        if st.button("Load RAG 📚", key="load_rag_button"):
+        if st.button(f"{button_style} {view_info['label']}", key=f"nav_{view_key}"):
+            # Check if data view requires login
+            if view_key == "data" and not st.session_state.get("password_correct", False):
+                st.error("Please login to access Threat Data")
+            else:
+                st.session_state.current_view = view_key
+                st.rerun()
+    
+    st.divider()
+    
+    ## 3. Additional Actions (only show when logged in)
+    if st.session_state.get("password_correct", False):
+        st.header("⚙️ Actions")
+        
+        if st.button("📚 Load RAG", key="load_rag_button"):
             Load_Rag()
 
-        if st.button("Logout"):
+        if st.button("🚪 Logout"):
             st.session_state["password_correct"] = False
             st.session_state.current_view = "chat" # Reset view on logout
             st.rerun()
-
-    st.divider()
 
 # --- Main Content (Conditional Display) ---
 
@@ -314,3 +452,7 @@ elif st.session_state.current_view == "data":
         st.error("You must be logged in to view the Threat Data.")
         st.session_state.current_view = "chat"
         st.rerun()
+
+elif st.session_state.current_view == "about":
+    # --- About Us Page ---
+    display_about_us()
